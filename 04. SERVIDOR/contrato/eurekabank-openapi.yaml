@@ -1,0 +1,1227 @@
+# =============================================================================
+# EURECABANK - Contrato del servicio web RESTful (OpenAPI 3.0.3)
+# =============================================================================
+# Servicio      : EURECABANK RESTful
+# Estilo        : RESTful con JSON (equivalente REST del WSDL del proyecto SOAP)
+# Contexto      : /EUREKABANK_RESTFUL_JAVA      Base de la API: /api
+# Servidor      : Payara 7 (Jakarta EE 10 / JAX-RS 3.1 / JSON-B 3.0), WAR
+# Version       : 1.0
+# Fecha         : 2026-11-04
+# Autores       : Grupo GR03 - EURECABANK
+# Fuente        : 01. UML/00. CONTRATO/CONTRATO_CONGELADO_REST.md
+# ---------------------------------------------------------------------------
+# CONTRATO CONGELADO: este fichero no se modifica sin actualizar, en el mismo
+# dia, el contrato congelado en Markdown, el ERS, el ECUD, los diagramas
+# PowerDesigner y el codigo del servidor y del cliente.
+#
+# Las 9 operaciones, los 17 codigos de respuesta con su mensaje literal, el
+# orden de validacion y las 14 reglas de negocio coinciden con el contrato.
+#
+# CONVENCIONES DE ESTE FICHERO
+#   - El `description` de cada respuesta es el MENSAJE LITERAL del catalogo de
+#     codigos (contrato §5). Cuando un mismo status HTTP corresponde a VARIOS
+#     codigos (401 = AUTH-003 + AUTH-004; 400 = DAT-001 + MON-001 + CTA-003;
+#     409 = CTA-002 + CTA-004 + SAL-001 + MON-002), el `description` es la
+#     concatenacion de los mensajes literales separados por " | " y la
+#     extension `x-codigos` lista los codigos que pueden producir ese status.
+#     OpenAPI admite una sola entrada por status en `responses`.
+#   - El HTTP status acompana SIEMPRE al codigo de negocio: 200 con codigo=200,
+#     401 con codigo=AUTH-003, 409 con codigo=SAL-001, etc. El cliente lee los
+#     dos: el status para la logica HTTP y el `codigo` para el mensaje.
+#   - El token de sesion viaja en la cabecera `Authorization: Bearer <token>`,
+#     NUNCA en la URL ni en el cuerpo.
+#   - `LIM-001` (409) esta reservado en el catalogo y ninguna de las 9
+#     operaciones lo emite: el limite de mantenimiento viaja como dato
+#     `limiteMantenimiento` de `RespuestaCostos`.
+# =============================================================================
+
+openapi: 3.0.3
+
+info:
+  title: EURECABANK RESTful
+  version: 1.0.0
+  description: |
+    Servicio RESTful del banco ficticio **EURECABANK**: autenticacion con token
+    de sesion, consulta de cuentas y movimientos, y realizacion de depositos,
+    retiros y transferencias con control de saldo, ITF y costos.
+
+    **Sobre de respuesta.** Toda respuesta (de exito o de error) es un objeto
+    JSON con los atributos `estado` (`OK` / `ERROR`), `codigo` (codigo de
+    resultado del catalogo de §5 del contrato congelado) y `mensaje` (mensaje
+    literal en espanol), mas los atributos propios del tipo de respuesta.
+
+    **Codigos de negocio y HTTP.** Los 17 codigos del catalogo conservan sus
+    mensajes     literales y ahora ademas se corresponden con un HTTP status real:
+    200, 400, 401, 403, 404, 409, 500 y 503.
+
+    **Autenticacion.** `POST /auth/login` devuelve un token UUID con TTL de 30
+    minutos. Las 7 operaciones de negocio (3 a 9) exigen la cabecera
+    `Authorization: Bearer <token>`. `POST /auth/logout` exige tambien esa
+    cabecera en tiempo de ejecucion (cierra la sesion del token), aunque no
+    declara el esquema `bearerAuth` en el OpenAPI.
+
+    **Orden de validacion.** Es congelado y el cliente lo puede verificar: si
+    una peticion viola dos reglas, gana la primera de la lista del contrato
+    (§6). La capa REST valida la cabecera y los parametros ANTES de delegar en
+    los servicios, de modo que `DAT-001` precede siempre a `AUTH-003` y
+    `AUTH-004`.
+  contact:
+    name: Grupo GR03 - EURECABANK
+  license:
+    name: Uso academico
+    url: https://www.unesp.edu.ec/
+
+servers:
+  - url: http://localhost:8080/EUREKABANK_RESTFUL_JAVA/api
+    description: >-
+      Servidor local de pruebas: Payara 7, dominio domain1, puerto 8080.
+      El context root es /EUREKABANK_RESTFUL_JAVA y la base de la API es /api.
+
+tags:
+  - name: Autenticacion
+    description: Emision y cierre del token de sesion.
+  - name: Clientes
+    description: Consulta de las cuentas de un cliente por su cedula.
+  - name: Cuentas
+    description: Consulta de cuentas, movimientos y costos de mantenimiento.
+  - name: Movimientos
+    description: Depositos, retiros y transferencias.
+
+paths:
+
+  # ===========================================================================
+  # Operacion 1 - autenticar  (CU-01)
+  # ===========================================================================
+  /auth/login:
+    post:
+      tags: [Autenticacion]
+      operationId: autenticar
+      summary: Autenticar usuario
+      description: |
+        Valida las credenciales contra la tabla `usuario` (hash SHA-256 en
+        tiempo constante, RB-13), comprueba que el empleado este ACTIVO,
+        genera un token UUID con TTL de 30 minutos (RB-14) e inserta la
+        sesion en `logsession`.
+
+        Orden de validacion (§5.2): `DAT-001` -> `AUTH-001` -> `AUTH-002`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutenticacionRequest'
+      responses:
+        '200':
+          description: Autenticación exitosa
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaAutenticacion'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: El usuario o la contraseña son incorrectos
+          x-codigos: ['AUTH-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '403':
+          description: El usuario se encuentra inactivo
+          x-codigos: ['AUTH-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 2 - cerrarSesion  (CU-01)
+  # ===========================================================================
+  /auth/logout:
+    post:
+      tags: [Autenticacion]
+      operationId: cerrarSesion
+      summary: Cerrar sesion
+      description: |
+        Cierra la sesion identificada por el token: marca `logsession.fec_salida`
+        y descarta el token del registro en memoria (RB-14). Las siguientes
+        peticiones con ese token responden `AUTH-003`.
+
+        En tiempo de ejecucion exige la cabecera `Authorization: Bearer <token>`;
+        el esquema `bearerAuth` no se declara aqui porque las dos operaciones de
+        `/auth` quedan fuera del grupo de las 7 protegidas del OpenAPI.
+
+        Orden de validacion (§5.3): `DAT-001` -> `AUTH-003` -> `AUTH-004`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Sesión cerrada correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 3 - listarCuentasPorCliente  (CU-03)
+  # ===========================================================================
+  /clientes/{cedula}/cuentas:
+    get:
+      tags: [Clientes]
+      operationId: listarCuentasPorCliente
+      summary: Listar las cuentas de un cliente
+      description: |
+        Devuelve todas las cuentas del cliente identificado por su cedula,
+        incluidas las que no estan en estado ACTIVO (su estado queda visible).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cedula
+          in: path
+          required: true
+          description: Cedula (DNI) del cliente, 8 digitos.
+          schema:
+            type: string
+          example: '06914897'
+      responses:
+        '200':
+          description: Cuentas consultadas correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaCuentas'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: El cliente solicitado no existe
+          x-codigos: ['CLI-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 4 - consultarCuenta  (CU-03)
+  # ===========================================================================
+  /cuentas/{cuenta}:
+    get:
+      tags: [Cuentas]
+      operationId: consultarCuenta
+      summary: Consultar una cuenta
+      description: |
+        Devuelve el detalle completo de la cuenta indicada: codigo, moneda,
+        saldo, estado, cliente, sucursal, fecha de creacion, clave y contador
+        de operaciones realizadas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cuenta
+          in: path
+          required: true
+          description: Codigo de la cuenta, 8 caracteres.
+          schema:
+            type: string
+          example: '00200002'
+      responses:
+        '200':
+          description: Cuenta consultada correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaCuenta'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: La cuenta no se encuentra en estado ACTIVO
+          x-codigos: ['CTA-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 5 - consultarMovimientos  (CU-04)
+  # ===========================================================================
+  /cuentas/{cuenta}/movimientos:
+    get:
+      tags: [Cuentas]
+      operationId: consultarMovimientos
+      summary: Consultar los movimientos de una cuenta
+      description: |
+        Devuelve el libro de movimientos de la cuenta indicada, en orden
+        consecutivo, con numero, fecha, tipo (codigo, descripcion y accion),
+        importe, cuenta de referencia y empleado que lo registro.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cuenta
+          in: path
+          required: true
+          description: Codigo de la cuenta, 8 caracteres.
+          schema:
+            type: string
+          example: '00200002'
+      responses:
+        '200':
+          description: Movimientos consultados correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaMovimientos'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: La cuenta no se encuentra en estado ACTIVO
+          x-codigos: ['CTA-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 6 - realizarDeposito  (CU-05)
+  # ===========================================================================
+  /cuentas/{cuenta}/depositos:
+    post:
+      tags: [Movimientos]
+      operationId: realizarDeposito
+      summary: Realizar un deposito
+      description: |
+        Incrementa el saldo de la cuenta en el monto recibido y registra un
+        movimiento de tipo `003` (Deposito, INGRESO) con `chr_cuenreferencia`
+        NULL, dentro de una unica transaccion que bloquea la fila con
+        `SELECT ... FOR UPDATE` (RB-02, RB-03, RB-05).
+
+        Si el numero de movimiento supera el parametro `002` (15) se cobra el
+        costo por movimiento y se registra el movimiento `010` (RB-09).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cuenta
+          in: path
+          required: true
+          description: Codigo de la cuenta que recibe el deposito, 8 caracteres.
+          schema:
+            type: string
+          example: '00200002'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MontoRequest'
+      responses:
+        '200':
+          description: Depósito realizado correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaMovimiento'
+        '400':
+          description: >-
+            Los datos de la petición están incompletos o son incorrectos | El monto debe ser mayor que cero y con máximo dos decimales
+          x-codigos: ['DAT-001', 'MON-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: >-
+            La cuenta no se encuentra en estado ACTIVO | La moneda de la cuenta no está soportada por el sistema
+          x-codigos: ['CTA-002', 'MON-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 7 - realizarRetiro  (CU-06)
+  # ===========================================================================
+  /cuentas/{cuenta}/retiros:
+    post:
+      tags: [Movimientos]
+      operationId: realizarRetiro
+      summary: Realizar un retiro
+      description: |
+        Descuenta el monto recibido del saldo de la cuenta y registra un
+        movimiento de tipo `004` (Retiro, SALIDA) con `chr_cuenreferencia` NULL,
+        en una unica transaccion que bloquea la fila con `SELECT ... FOR UPDATE`.
+        El saldo nunca queda negativo: si es insuficiente devuelve `SAL-001`
+        (RB-02, RB-03, RB-06).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cuenta
+          in: path
+          required: true
+          description: Codigo de la cuenta de la que se retira el monto, 8 caracteres.
+          schema:
+            type: string
+          example: '00200002'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MontoRequest'
+      responses:
+        '200':
+          description: Retiro realizado correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaMovimiento'
+        '400':
+          description: >-
+            Los datos de la petición están incompletos o son incorrectos | El monto debe ser mayor que cero y con máximo dos decimales
+          x-codigos: ['DAT-001', 'MON-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: >-
+            La cuenta no se encuentra en estado ACTIVO | El saldo de la cuenta es insuficiente para la operación | La moneda de la cuenta no está soportada por el sistema
+          x-codigos: ['CTA-002', 'SAL-001', 'MON-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 8 - realizarTransferencia  (CU-07)
+  # ===========================================================================
+  /transferencias:
+    post:
+      tags: [Movimientos]
+      operationId: realizarTransferencia
+      summary: Realizar una transferencia
+      description: |
+        Descuenta el monto de la cuenta origen y lo acredita en la cuenta
+        destino en una sola transaccion, generando dos movimientos: `009` (SALIDA)
+        en el origen con `chr_cuenreferencia` = cuenta destino y `008` (INGRESO)
+        en el destino con `chr_cuenreferencia` = cuenta origen (RB-07).
+
+        Ademas calcula el ITF (RB-08) y, si es mayor que cero, registra el
+        movimiento `007` (SALIDA) en la cuenta origen. Las dos cuentas se
+        bloquean siempre en el mismo orden para que dos transferencias cruzadas
+        no se bloqueen entre si.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaRequest'
+      responses:
+        '200':
+          description: Transferencia realizada correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaTransferencia'
+        '400':
+          description: >-
+            Los datos de la petición están incompletos o son incorrectos | El monto debe ser mayor que cero y con máximo dos decimales | La cuenta origen y la cuenta destino no pueden ser iguales
+          x-codigos: ['DAT-001', 'MON-001', 'CTA-003']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: >-
+            La cuenta no se encuentra en estado ACTIVO | La cuenta de destino pertenece a una moneda distinta | El saldo de la cuenta es insuficiente para la operación | La moneda de la cuenta no está soportada por el sistema
+          x-codigos: ['CTA-002', 'CTA-004', 'SAL-001', 'MON-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+  # ===========================================================================
+  # Operacion 9 - consultarCostosMantenimiento  (CU-08)
+  # ===========================================================================
+  /cuentas/{cuenta}/costos:
+    get:
+      tags: [Cuentas]
+      operationId: consultarCostosMantenimiento
+      summary: Consultar los costos de mantenimiento
+      description: |
+        Proyecta, **sin ejecutarlos**, los costos de mantenimiento de la cuenta:
+        saldo actual, costo de mantenimiento (si el saldo no supera el umbral de
+        la moneda, RB-10), costo por movimiento, interes mensual proyectado
+        (RB-11), limite de mantenimiento y numero de operaciones realizadas sin
+        costo. El cobro efectivo y el abono del interes los hace un proceso
+        batch externo, fuera de alcance (RB-12).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cuenta
+          in: path
+          required: true
+          description: Codigo de la cuenta, 8 caracteres.
+          schema:
+            type: string
+          example: '00200002'
+      responses:
+        '200':
+          description: Costos de mantenimiento consultados correctamente
+          x-codigos: ['200']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaCostos'
+        '400':
+          description: Los datos de la petición están incompletos o son incorrectos
+          x-codigos: ['DAT-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '401':
+          description: >-
+            El token de sesión no es válido | El token de sesión ha expirado, inicie sesión nuevamente
+          x-codigos: ['AUTH-003', 'AUTH-004']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '404':
+          description: La cuenta solicitada no existe
+          x-codigos: ['CTA-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '409':
+          description: >-
+            La cuenta no se encuentra en estado ACTIVO | La moneda de la cuenta no está soportada por el sistema
+          x-codigos: ['CTA-002', 'MON-002']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '500':
+          description: Ocurrió un error interno, intente nuevamente
+          x-codigos: ['ERR-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+        '503':
+          description: El servicio no está disponible en este momento
+          x-codigos: ['SER-001']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaBase'
+
+components:
+
+  # ---------------------------------------------------------------------------
+  # Esquemas del sobre de respuesta
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    RespuestaBase:
+      type: object
+      title: RespuestaBase
+      description: >-
+        Sobre de respuesta base. Es lo que devuelve el servidor cuando la
+        operacion falla: los tres atributos comunes, con `estado` = ERROR y el
+        `codigo` y el `mensaje` literales del catalogo. Los tipos derivados
+        (RespuestaAutenticacion, RespuestaCuentas, ...) heredan de este esquema.
+      required:
+        - estado
+        - codigo
+        - mensaje
+      properties:
+        estado:
+          type: string
+          description: '`OK` si la operacion fue correcta, `ERROR` si devolvio un codigo de error.'
+          enum: [OK, ERROR]
+        codigo:
+          type: string
+          description: Codigo de resultado del catalogo de §5 del contrato congelado.
+          enum:
+            - '200'
+            - 'DAT-001'
+            - 'AUTH-001'
+            - 'AUTH-002'
+            - 'AUTH-003'
+            - 'AUTH-004'
+            - 'CTA-001'
+            - 'CTA-002'
+            - 'CTA-003'
+            - 'CTA-004'
+            - 'CLI-001'
+            - 'SAL-001'
+            - 'MON-001'
+            - 'MON-002'
+            - 'LIM-001'
+            - 'SER-001'
+            - 'ERR-001'
+        mensaje:
+          type: string
+          description: Mensaje literal en espanol del catalogo de §5 del contrato congelado.
+          example: Los datos de la petición están incompletos o son incorrectos
+
+    RespuestaAutenticacion:
+      title: RespuestaAutenticacion
+      description: Sobre de exito de la operacion `autenticar`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - token
+            - empleado
+            - nombreEmpleado
+            - expiracion
+            - rol
+          properties:
+            token:
+              type: string
+              description: >-
+                Token de sesion (UUID) que debe viajar en la cabecera
+                `Authorization: Bearer <token>`.
+              example: 2f9c2f0e-1a4b-4d7f-9c33-6b1f0a5d7e21
+            empleado:
+              type: string
+              description: Codigo del empleado (`chr_emplcodigo`, 4 caracteres).
+              example: '0001'
+            nombreEmpleado:
+              type: string
+              description: Nombre completo del empleado autenticado.
+              example: Carlos Alberto Romero Castillo
+            expiracion:
+              type: string
+              format: date-time
+              description: Instante de expiracion del token en ISO-8601 (TTL de 30 minutos, RB-14).
+              example: '2026-11-04T10:30:00Z'
+            rol:
+              type: string
+              description: Rol o perfil del usuario autenticado.
+              example: CAJERO
+
+    RespuestaCuentas:
+      title: RespuestaCuentas
+      description: Sobre de exito de la operacion `listarCuentasPorCliente`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - cedula
+            - nombreCliente
+            - cuentas
+          properties:
+            cedula:
+              type: string
+              description: Cedula (DNI) del cliente consultado.
+              example: '06914897'
+            nombreCliente:
+              type: string
+              description: Nombre completo del cliente.
+              example: Eric Gustavo Coronel Castillo
+            cuentas:
+              type: array
+              description: Cuentas del cliente, incluidas las que no estan ACTIVO.
+              items:
+                $ref: '#/components/schemas/CuentaDTO'
+
+    RespuestaCuenta:
+      title: RespuestaCuenta
+      description: Sobre de exito de la operacion `consultarCuenta`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - cuenta
+          properties:
+            cuenta:
+              $ref: '#/components/schemas/CuentaDTO'
+
+    RespuestaMovimientos:
+      title: RespuestaMovimientos
+      description: Sobre de exito de la operacion `consultarMovimientos`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - cuenta
+            - movimientos
+          properties:
+            cuenta:
+              type: string
+              description: Codigo de la cuenta consultada.
+              example: '00200002'
+            movimientos:
+              type: array
+              description: Movimientos de la cuenta, en orden consecutivo.
+              items:
+                $ref: '#/components/schemas/MovimientoDTO'
+
+    RespuestaMovimiento:
+      title: RespuestaMovimiento
+      description: Sobre de exito de las operaciones `realizarDeposito` y `realizarRetiro`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - movimiento
+            - saldoNuevo
+            - costoAplicado
+            - itfAplicado
+          properties:
+            movimiento:
+              $ref: '#/components/schemas/MovimientoDTO'
+            saldoNuevo:
+              type: number
+              format: double
+              description: >-
+                Saldo de la cuenta despues de aplicar el movimiento.
+                Java `BigDecimal` con escala 2 y redondeo `HALF_UP` (RB-01).
+              example: 7300.00
+            costoAplicado:
+              type: number
+              format: double
+              description: >-
+                Costo por movimiento cobrado (RB-09); cero si el movimiento no
+                supera las operaciones sin costo. `BigDecimal` escala 2 HALF_UP.
+              example: 0.00
+            itfAplicado:
+              type: number
+              format: double
+              description: >-
+                ITF aplicado; cero en deposito y retiro (solo las transferencias
+                lo aplican, RB-08). `BigDecimal` escala 2 HALF_UP.
+              example: 0.00
+
+    RespuestaTransferencia:
+      title: RespuestaTransferencia
+      description: Sobre de exito de la operacion `realizarTransferencia`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - numeroOrigen
+            - numeroDestino
+            - saldoOrigen
+            - saldoDestino
+            - itfAplicado
+          properties:
+            numeroOrigen:
+              type: integer
+              format: int32
+              description: Numero del movimiento de salida en la cuenta origen.
+              example: 6
+            numeroDestino:
+              type: integer
+              format: int32
+              description: Numero del movimiento de entrada en la cuenta destino.
+              example: 4
+            saldoOrigen:
+              type: number
+              format: double
+              description: Saldo de la cuenta origen tras la transferencia. `BigDecimal` escala 2 HALF_UP.
+              example: 1700.00
+            saldoDestino:
+              type: number
+              format: double
+              description: Saldo de la cuenta destino tras la transferencia. `BigDecimal` escala 2 HALF_UP.
+              example: 8500.00
+            itfAplicado:
+              type: number
+              format: double
+              description: ITF de la transferencia (RB-08). `BigDecimal` escala 2 HALF_UP.
+              example: 20.00
+
+    RespuestaCostos:
+      title: RespuestaCostos
+      description: Sobre de exito de la operacion `consultarCostosMantenimiento`.
+      allOf:
+        - $ref: '#/components/schemas/RespuestaBase'
+        - type: object
+          required:
+            - saldoActual
+            - costoMantenimiento
+            - costoMovimiento
+            - interesProyectado
+            - limiteMantenimiento
+            - operacionesSinCosto
+          properties:
+            saldoActual:
+              type: number
+              format: double
+              description: Saldo actual de la cuenta. `BigDecimal` escala 2 HALF_UP.
+              example: 6800.00
+            costoMantenimiento:
+              type: number
+              format: double
+              description: Costo de mantenimiento proyectado (RB-10); cero si el saldo supera el umbral.
+              example: 5.00
+            costoMovimiento:
+              type: number
+              format: double
+              description: Costo por movimiento de la moneda de la cuenta (RB-09).
+              example: 0.50
+            interesProyectado:
+              type: number
+              format: double
+              description: Interes mensual proyectado (RB-11); no se abona (RB-12).
+              example: 6.80
+            limiteMantenimiento:
+              type: number
+              format: double
+              description: Umbral de saldo (`dec_cargMontoMaximo`) a partir del cual se cobra mantenimiento.
+              example: 1000.00
+            operacionesSinCosto:
+              type: integer
+              format: int32
+              description: Numero de operaciones que aun no se cobran (parametro `002`, 15).
+              example: 15
+
+    CuentaDTO:
+      type: object
+      title: CuentaDTO
+      description: Datos de una cuenta del cliente.
+      required:
+        - codigo
+        - moneda
+        - descripcionMoneda
+        - saldo
+        - estado
+        - codigoCliente
+        - nombreCliente
+        - codigoSucursal
+        - fechaCreacion
+        - clave
+        - operacionesRealizadas
+      properties:
+        codigo:
+          type: string
+          description: Codigo de la cuenta (`chr_cuencodigo`, 8 caracteres).
+          example: '00200002'
+        moneda:
+          type: string
+          description: Codigo de la moneda (`01` Soles, `02` Dolares).
+          example: '01'
+        descripcionMoneda:
+          type: string
+          description: Nombre de la moneda.
+          example: Soles
+        saldo:
+          type: number
+          format: double
+          description: Saldo de la cuenta. `BigDecimal` escala 2 HALF_UP (RB-01).
+          example: 6800.00
+        estado:
+          type: string
+          description: Estado de la cuenta (`ACTIVO`, `ANULADO`, `CANCELADO`).
+          example: ACTIVO
+        codigoCliente:
+          type: string
+          description: Codigo del cliente (`chr_cliecodigo`, 5 caracteres).
+          example: '00002'
+        nombreCliente:
+          type: string
+          description: Nombre completo del cliente.
+          example: Eric Gustavo Coronel Castillo
+        codigoSucursal:
+          type: string
+          description: Codigo de la sucursal (`chr_sucucodigo`, 3 caracteres).
+          example: '001'
+        fechaCreacion:
+          type: string
+          format: date
+          description: Fecha de creacion de la cuenta en ISO-8601 (`yyyy-MM-dd`).
+          example: '2024-03-15'
+        clave:
+          type: string
+          description: Clave de ventanilla de la cuenta.
+          example: '845123'
+        operacionesRealizadas:
+          type: integer
+          format: int32
+          description: Numero de movimientos ya realizados (`int_cuencontmov`).
+          example: 5
+
+    MovimientoDTO:
+      type: object
+      title: MovimientoDTO
+      description: Datos de un movimiento del libro de movimientos.
+      required:
+        - numero
+        - fecha
+        - tipoCodigo
+        - tipoDescripcion
+        - tipoAccion
+        - importe
+        - referencia
+        - empleado
+      properties:
+        numero:
+          type: integer
+          format: int32
+          description: Numero consecutivo del movimiento en la cuenta (`int_movinumero`).
+          example: 5
+        fecha:
+          type: string
+          format: date
+          description: Fecha del movimiento en ISO-8601 (`yyyy-MM-dd`).
+          example: '2026-11-03'
+        tipoCodigo:
+          type: string
+          description: Codigo del tipo de movimiento (`chr_tipocodigo`, 3 caracteres).
+          example: '003'
+        tipoDescripcion:
+          type: string
+          description: Descripcion del tipo de movimiento.
+          example: Deposito
+        tipoAccion:
+          type: string
+          description: Accion del tipo de movimiento (`INGRESO` o `SALIDA`).
+          example: INGRESO
+        importe:
+          type: number
+          format: double
+          description: Importe del movimiento. `BigDecimal` escala 2 HALF_UP (RB-01).
+          example: 500.00
+        referencia:
+          type: string
+          nullable: true
+          description: >-
+            Cuenta de referencia (`chr_cuenreferencia`); NULL en deposito, retiro,
+            interes, mantenimiento y costo por movimiento.
+          example: null
+        empleado:
+          type: string
+          description: Codigo del empleado que registro el movimiento.
+          example: '0001'
+
+  # ---------------------------------------------------------------------------
+  # Esquemas de los cuerpos de peticion
+  # ---------------------------------------------------------------------------
+    AutenticacionRequest:
+      type: object
+      title: AutenticacionRequest
+      description: >-
+        Credenciales de acceso. La `clave` viaja como su hash SHA-256
+        hexadecimal de 64 caracteres, nunca en claro (RB-13).
+      required:
+        - usuario
+        - clave
+      properties:
+        usuario:
+          type: string
+          description: Nombre de usuario (`vch_emplusuario`).
+          example: cromero
+        clave:
+          type: string
+          description: Hash SHA-256 hexadecimal de la contrasena.
+          example: 891337e9a11b6a3a19872e32f6318a2c24e5060f0d2652e716bf038fbd8c68d4
+
+    LogoutRequest:
+      type: object
+      title: LogoutRequest
+      description: >-
+        Cuerpo vacio `{}`. La sesion que se cierra se identifica con el token de
+        la cabecera `Authorization: Bearer <token>`.
+      properties: {}
+      additionalProperties: false
+
+    MontoRequest:
+      type: object
+      title: MontoRequest
+      description: Importe de la operacion.
+      required:
+        - monto
+      properties:
+        monto:
+          type: number
+          format: double
+          description: >-
+            Importe con maximo dos decimales, mayor que cero (MON-001). En Java
+            se maneja como `BigDecimal` con escala 2 y redondeo `HALF_UP`
+            (RB-01); nunca `double`.
+          example: 250.50
+
+    TransferenciaRequest:
+      type: object
+      title: TransferenciaRequest
+      description: Datos de la transferencia entre dos cuentas.
+      required:
+        - cuentaOrigen
+        - cuentaDestino
+        - monto
+      properties:
+        cuentaOrigen:
+          type: string
+          description: Codigo de la cuenta de la que sale el monto, 8 caracteres.
+          example: '00200002'
+        cuentaDestino:
+          type: string
+          description: Codigo de la cuenta que recibe el monto, 8 caracteres.
+          example: '00100002'
+        monto:
+          type: number
+          format: double
+          description: >-
+            Importe con maximo dos decimales, mayor que cero (MON-001). En Java
+            se maneja como `BigDecimal` con escala 2 y redondeo `HALF_UP`
+            (RB-01); nunca `double`.
+          example: 250.50
+
+  # ---------------------------------------------------------------------------
+  # Esquema de seguridad
+  # ---------------------------------------------------------------------------
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: UUID
+      description: >-
+        Token de sesion (UUID) devuelto por `POST /auth/login`, con TTL de 30
+        minutos (RB-14). Viaja en la cabecera `Authorization: Bearer <token>`,
+        nunca en la URL.

@@ -1,0 +1,66 @@
+# ==========================================
+# 1. RESPALDOS QUE GENERA POWERDESIGNER AL GUARDAR
+#    (se regeneran solos; subirlos solo causa conflictos)
+#    Los .oom, .eam, .ldm, .pdm, .prj y .sws SI se versionan:
+#    son los modelos que abre el docente.
+# ==========================================
+*.oob
+*.pjb
+*.eab
+*.bak
+*.tmp
+*.log
+
+# ==========================================
+# 2. JAVA / MAVEN
+#    target/ contiene rutas absolutas de cada PC
+# ==========================================
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# ==========================================
+# 3. CLIENTES DE LOS COMPAÑEROS
+# ==========================================
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.apk
+*.aab
+*.ipa
+*.keystore
+*.jks
+
+# ==========================================
+# 4. CACHÉ DE PYTHON (por si se vuelve a usar alguna herramienta)
+# ==========================================
+__pycache__/
+*.pyc
+
+# ==========================================
+# 5. IDEs, SISTEMA OPERATIVO Y TEMPORALES
+# ==========================================
+nbproject/private/
+.settings/
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+.~lock.*#
+
+# Pizarra interna del equipo de agentes (no forma parte de la entrega)
+.estacion/
+
+# Pizarra interna de trabajo (no es parte de la entrega)
+.estacion/

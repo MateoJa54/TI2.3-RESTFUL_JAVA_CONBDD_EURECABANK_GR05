@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+    <display-name>EUREKABANK_RESTFUL_JAVA_WEB - Cliente web de EURECABANK</display-name>
+
+    <!-- La URL del servicio REST se resuelve en este orden: parametro de contexto
+         servicio.url, propiedad -Dservicio.url, variable de entorno SERVICIO_URL y,
+         si no hay ninguna, http://localhost:8080/EUREKABANK_RESTFUL_JAVA/api.
+         No se declara aqui un valor fijo: un parametro de contexto tapa a los demas.
+         Para fijarla en el WAR, anada un bloque context-param con el nombre servicio.url. -->
+
+    <request-character-encoding>UTF-8</request-character-encoding>
+    <response-character-encoding>UTF-8</response-character-encoding>
+
+    <session-config>
+        <!-- 30 minutos sin actividad -->
+        <session-timeout>30</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+            <attribute>
+                <attribute-name>SameSite</attribute-name>
+                <attribute-value>Strict</attribute-value>
+            </attribute>
+        </cookie-config>
+        <tracking-mode>COOKIE</tracking-mode>
+    </session-config>
+
+    <jsp-config>
+        <jsp-property-group>
+            <url-pattern>*.jsp</url-pattern>
+            <page-encoding>UTF-8</page-encoding>
+            <trim-directive-whitespaces>true</trim-directive-whitespaces>
+        </jsp-property-group>
+    </jsp-config>
+
+    <!-- Toda pagina de error sale de la misma vista y nunca muestra trazas. -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/WEB-INF/vistas/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/WEB-INF/vistas/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>405</error-code>
+        <location>/WEB-INF/vistas/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/WEB-INF/vistas/error.jsp</location>
+    </error-page>
+    <error-page>
+        <exception-type>java.lang.Throwable</exception-type>
+        <location>/WEB-INF/vistas/error.jsp</location>
+    </error-page>
+</web-app>

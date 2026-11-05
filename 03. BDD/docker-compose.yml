@@ -1,0 +1,58 @@
+# =============================================================================
+# EURECABANK - Base de datos MySQL 8.4 para desarrollo y defensa
+# =============================================================================
+# Uso (desde la carpeta "03. BDD"):
+#   docker compose up -d        levanta el contenedor
+#   docker compose logs -f      sigue el arranque (carga de los scripts)
+#   docker compose ps           estado y salud del contenedor
+#   docker compose down         detiene el contenedor (conserva el volumen)
+#   docker compose down -v      detiene el contenedor y BORRA el volumen
+#
+# IMPORTANTE: los scripts de docker/init se ejecutan SOLO la primera vez que se
+# crea el volumen "eurekabank_data". Si editas un script, para que se aplique
+# de nuevo tienes que rehacer el volumen:
+#   docker compose down -v
+#   docker compose up -d
+# =============================================================================
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: eurekabank-mysql
+    restart: unless-stopped
+
+    environment:
+      # Clave del administrador (solo laboratorio)
+      MYSQL_ROOT_PASSWORD: root123
+      # Base de datos que crea la imagen y a la que se apuntan los scripts
+      MYSQL_DATABASE: eurekabank
+      # Usuario de aplicacion (privilegio minimo: SELECT, INSERT, UPDATE, DELETE)
+      MYSQL_USER: eurekabank_app
+      MYSQL_PASSWORD: EurekaBank2026!
+      # Hora del Ecuador (UTC-5)
+      TZ: America/Guayaquil
+
+    # Puerto 3307 en el computador para NO chocar con un MySQL local en 3306.
+    # Solo se publica en 127.0.0.1: la base no queda expuesta a la red.
+    ports:
+      - "127.0.0.1:3307:3306"
+
+    # Charset y collation del servidor (utf8mb4 con acentos y simbolos)
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+
+    volumes:
+      # Volumen nombrado: conserva los datos entre reinicios
+      - eurekabank_data:/var/lib/mysql
+      # Scripts de inicializacion (solo se ejecutan con volumen nuevo)
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  eurekabank_data:
+    driver: local

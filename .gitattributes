@@ -1,0 +1,17 @@
+# PowerDesigner: archivos con formato propietario, marcar como binario para no
+# que git intente normalizar saltos de linea (rompe la firma interna del .oom)
+*.oom -text
+*.eam -text
+*.ldm -text
+*.pdm -text
+*.prj -text
+*.sws -text
+
+# Texto normal
+*.md text eol=lf
+*.xml text eol=lf
+*.xsd text eol=lf
+*.wsdl text eol=lf
+*.sql text eol=lf
+*.java text eol=lf
+*.yml text eol=lf
