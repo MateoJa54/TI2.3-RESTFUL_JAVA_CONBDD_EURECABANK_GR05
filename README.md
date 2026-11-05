@@ -77,7 +77,7 @@ defines `EUREKABANK_DB_URL`.
 & "PAYARA\bin\asadmin.bat" deploy --name EUREKABANK_RESTFUL_JAVA_WEB --contextroot EUREKABANK_RESTFUL_JAVA_WEB "04. CLIWEB\EUREKABANK_RESTFUL_JAVA_WEB\target\EUREKABANK_RESTFUL_JAVA_WEB.war"
 ```
 
-La API queda en `http://localhost:8080/EUREKABANK_RESTFUL_JAVA/api` y la web en
+La API queda en `http://localhost:8080/EUREKABANK_RESTFUL_JAVA/api` (la raíz `http://localhost:8080/EUREKABANK_RESTFUL_JAVA/` muestra una portada con las nueve rutas) y la web en
 `http://localhost:8080/EUREKABANK_RESTFUL_JAVA_WEB/`. Si tu Payara usa otro puerto, define antes de arrancarlo
 `$env:SERVICIO_URL = "http://localhost:<puerto>/EUREKABANK_RESTFUL_JAVA/api"` para que la web y los clientes encuentren la API.
 
