@@ -72,10 +72,10 @@ class PanelMovimientosTest {
     }
 
     @Test
-    void laTablaTieneLasSeisColumnas() {
-        assertEquals(6, tabla.getColumnCount());
+    void laTablaTieneLasSieteColumnas() {
+        assertEquals(7, tabla.getColumnCount());
         assertEquals("Importe", tabla.getColumnName(4));
-        assertEquals(32, tabla.getRowHeight());
+        assertEquals(40, tabla.getRowHeight());
     }
 
     @Test

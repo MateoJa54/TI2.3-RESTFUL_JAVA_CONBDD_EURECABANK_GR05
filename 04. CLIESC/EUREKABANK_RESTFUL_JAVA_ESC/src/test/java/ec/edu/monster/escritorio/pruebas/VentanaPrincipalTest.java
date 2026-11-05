@@ -21,6 +21,7 @@ import java.awt.GraphicsEnvironment;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -84,15 +85,16 @@ class VentanaPrincipalTest {
     @Test
     void laBarraMuestraElNombreYElRolDelEmpleado() {
         JLabel empleado = Swing.buscar(ventana.getRootPane(), "etiquetaEmpleado", JLabel.class);
-        assertEquals("Carlos Romero (Consultas)", empleado.getText());
+        assertEquals("Carlos Romero", empleado.getText());
+        assertEquals("Consultas", Swing.buscar(ventana.getRootPane(), "etiquetaRol", JLabel.class).getText());
     }
 
     @Test
-    void laBarraSuperiorMideComoMaximo64() {
-        assertTrue(VentanaPrincipal.ALTO_BARRA <= 64);
+    void laBarraLateralMideDoscientosVeinte() {
+        assertEquals(220, Tema.ANCHO_BARRA);
         JLabel empleado = Swing.buscar(ventana.getRootPane(), "etiquetaEmpleado", JLabel.class);
-        var barra = empleado.getParent().getParent().getParent();
-        assertTrue(barra.getPreferredSize().height <= 64);
+        var barra = Swing.buscar(ventana.getRootPane(), "barraLateral", JPanel.class);
+        assertEquals(220, barra.getPreferredSize().width);
     }
 
     @Test

@@ -15,7 +15,6 @@ import ec.edu.monster.escritorio.vista.PanelOperacion;
 import ec.edu.monster.escritorio.vista.TareaAsincrona;
 import ec.edu.monster.escritorio.vista.Tema;
 import ec.edu.monster.escritorio.vista.VentanaPrincipal;
-import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.Objects;
@@ -102,8 +101,8 @@ public final class Main {
         JFrame marco = new JFrame("EUREKABANK");
         marco.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         marco.setContentPane(panel);
-        marco.setMinimumSize(new Dimension(820, 520));
-        marco.setSize(980, 600);
+        marco.setMinimumSize(Tema.VENTANA_MINIMA);
+        marco.setSize(Tema.VENTANA_INICIAL);
         marco.setLocationRelativeTo(null);
         marco.setVisible(true);
         ventana = marco;

@@ -305,9 +305,31 @@ public final class SesionWeb {
      * @param modulo   nombre del módulo activo
      */
     public static void prepararVista(HttpServletRequest peticion, String modulo) {
+        SesionUsuario sesion = sesionDe(peticion);
         peticion.setAttribute("modulo", modulo);
-        peticion.setAttribute("usuario", sesionDe(peticion));
+        peticion.setAttribute("usuario", sesion);
+        peticion.setAttribute("iniciales", iniciales(sesion == null ? null : sesion.getNombreEmpleado()));
         peticion.setAttribute("csrf", tokenCsrf(peticion));
+    }
+
+    /**
+     * Iniciales de un nombre para el avatar del empleado: la primera letra de las dos primeras
+     * palabras, en mayúscula.
+     *
+     * @param nombre nombre completo, puede ser {@code null}
+     * @return las iniciales, o cadena vacía si no hay letras
+     */
+    public static String iniciales(String nombre) {
+        if (nombre == null) {
+            return "";
+        }
+        StringBuilder letras = new StringBuilder();
+        for (String palabra : nombre.strip().split("\\s+")) {
+            if (!palabra.isEmpty() && letras.length() < 2) {
+                letras.append(Character.toUpperCase(palabra.charAt(0)));
+            }
+        }
+        return letras.toString();
     }
 
     // ------------------------------------------------------------------ envíos únicos

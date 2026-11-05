@@ -2,6 +2,7 @@ package ec.edu.monster.web.servlet;
 
 import ec.edu.monster.web.cliente.IClienteEUREKABANK;
 import ec.edu.monster.web.controlador.ControladorMovimientos;
+import ec.edu.monster.web.modelo.MovimientoDTO;
 import ec.edu.monster.web.modelo.RespuestaMovimientos;
 import ec.edu.monster.web.modelo.SesionUsuario;
 import ec.edu.monster.web.util.ExcepcionServicio;
@@ -12,6 +13,9 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,6 +63,7 @@ public class MovimientosServlet extends HttpServlet {
                     }
                     if ("OK".equals(resultado.getEstado())) {
                         peticion.setAttribute("resultado", resultado);
+                        peticion.setAttribute("resumen", resumir(resultado.getMovimientos()));
                     } else {
                         mensaje = SesionWeb.mensajeDe(resultado);
                     }
@@ -69,5 +74,40 @@ public class MovimientosServlet extends HttpServlet {
         }
         peticion.setAttribute("mensaje", mensaje);
         peticion.getRequestDispatcher(VISTA).forward(peticion, respuesta);
+    }
+
+    /**
+     * Resume los movimientos de una cuenta: lo que entró, lo que salió y cuántos hay. Los importes
+     * vienen siempre en positivo y su sentido lo dice {@code tipoAccion} (INGRESO o SALIDA). Una
+     * lista vacía da cero en todo.
+     *
+     * @param movimientos movimientos recibidos del servicio, puede estar vacía
+     * @return {@code ingresos} y {@code salidas} (importes), y {@code cantidad} (entero)
+     */
+    public static Map<String, Object> resumir(List<MovimientoDTO> movimientos) {
+        BigDecimal ingresos = BigDecimal.ZERO;
+        BigDecimal salidas = BigDecimal.ZERO;
+        int cantidad = 0;
+        if (movimientos != null) {
+            for (MovimientoDTO movimiento : movimientos) {
+                if (movimiento == null) {
+                    continue;
+                }
+                cantidad++;
+                if (movimiento.getImporte() == null) {
+                    continue;
+                }
+                if ("INGRESO".equals(movimiento.getTipoAccion())) {
+                    ingresos = ingresos.add(movimiento.getImporte());
+                } else if ("SALIDA".equals(movimiento.getTipoAccion())) {
+                    salidas = salidas.add(movimiento.getImporte());
+                }
+            }
+        }
+        Map<String, Object> resumen = new LinkedHashMap<>();
+        resumen.put("ingresos", ingresos);
+        resumen.put("salidas", salidas);
+        resumen.put("cantidad", cantidad);
+        return resumen;
     }
 }

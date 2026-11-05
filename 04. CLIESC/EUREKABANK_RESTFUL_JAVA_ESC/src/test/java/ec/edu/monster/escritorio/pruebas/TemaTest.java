@@ -106,9 +106,9 @@ class TemaTest {
     }
 
     @Test
-    void lasFilasDeLasTablasMiden32() {
-        assertEquals(32, Tema.ALTO_FILA);
-        assertEquals(32, UIManager.getInt("Table.rowHeight"));
+    void lasFilasDeLasTablasMiden40() {
+        assertEquals(40, Tema.ALTO_FILA);
+        assertEquals(40, UIManager.getInt("Table.rowHeight"));
     }
 
     @ParameterizedTest

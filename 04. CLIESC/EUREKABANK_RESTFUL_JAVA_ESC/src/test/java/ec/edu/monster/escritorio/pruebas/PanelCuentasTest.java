@@ -89,9 +89,9 @@ class PanelCuentasTest {
     }
 
     @Test
-    void laTablaEmpiezaVaciaYLasFilasMiden32() {
+    void laTablaEmpiezaVaciaYLasFilasMiden40() {
         assertEquals(0, tabla.getRowCount());
-        assertEquals(32, tabla.getRowHeight());
+        assertEquals(40, tabla.getRowHeight());
     }
 
     @Test
@@ -230,11 +230,11 @@ class PanelCuentasTest {
         assertFalse(boton.isEnabled());
         assertEquals("Procesando", boton.getText());
         var esqueleto = Swing.primero(panel, PanelTarjeta.Esqueleto.class);
-        assertTrue(esqueleto.isVisible(), "el esqueleto debe verse mientras carga");
+        assertTrue(esqueleto.getParent().isVisible(), "el esqueleto debe verse mientras carga");
         liberar.countDown();
         Swing.esperar(() -> boton.isEnabled());
         assertEquals("Buscar", boton.getText());
-        assertFalse(esqueleto.isVisible());
+        assertFalse(esqueleto.getParent().isVisible(), "la carta del esqueleto debe ocultarse");
     }
 
     @Test

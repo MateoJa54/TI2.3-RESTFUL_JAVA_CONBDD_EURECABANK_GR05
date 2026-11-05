@@ -54,7 +54,20 @@ public class OperacionServlet extends HttpServlet {
             return;
         }
         SesionWeb.prepararVista(peticion, "operacion");
-        peticion.setAttribute("mensaje", SesionWeb.tomarMensaje(peticion));
+        Map<String, Object> mensaje = SesionWeb.tomarMensaje(peticion);
+        Object previa = mensaje == null ? null : mensaje.get("cuenta");
+        String consulta = previa == null ? "" : String.valueOf(previa);
+        String enviada = peticion.getParameter("cuenta");
+        if (mensaje == null && enviada != null) {
+            consulta = SesionWeb.normalizar(SesionWeb.quitarControl(enviada));
+            if (consulta.isEmpty()) {
+                mensaje = SesionWeb.mensajeError(null, "Ingrese el código de la cuenta");
+            } else if (!SesionWeb.esEntradaSegura(consulta)) {
+                mensaje = SesionWeb.mensajeError(null, "El código de cuenta ingresado no tiene un formato válido");
+            }
+        }
+        peticion.setAttribute("consulta", consulta);
+        peticion.setAttribute("mensaje", mensaje);
         peticion.setAttribute("envio", SesionWeb.nuevoEnvio(peticion));
         peticion.getRequestDispatcher(VISTA).forward(peticion, respuesta);
     }
@@ -175,11 +188,16 @@ public class OperacionServlet extends HttpServlet {
     private static void agregarDetalle(Map<String, Object> mensaje, RespuestaBase resultado) {
         if (resultado instanceof RespuestaMovimiento) {
             RespuestaMovimiento movimiento = (RespuestaMovimiento) resultado;
+            if (movimiento.getMovimiento() != null) {
+                mensaje.put("numero", movimiento.getMovimiento().getNumero());
+            }
             mensaje.put("saldoNuevo", movimiento.getSaldoNuevo());
             mensaje.put("costoAplicado", movimiento.getCostoAplicado());
             mensaje.put("itfAplicado", movimiento.getItfAplicado());
         } else if (resultado instanceof RespuestaTransferencia) {
             RespuestaTransferencia transferencia = (RespuestaTransferencia) resultado;
+            mensaje.put("numeroOrigen", transferencia.getNumeroOrigen());
+            mensaje.put("numeroDestino", transferencia.getNumeroDestino());
             mensaje.put("saldoOrigen", transferencia.getSaldoOrigen());
             mensaje.put("saldoDestino", transferencia.getSaldoDestino());
             mensaje.put("itfAplicado", transferencia.getItfAplicado());

@@ -31,9 +31,13 @@ class SeguridadVistasTest {
     private static final Path WEB_XML = Path.of("src", "main", "webapp", "WEB-INF", "web.xml");
     private static final Path FUENTES = Path.of("src");
 
-    /** Etiquetas cuyo ${...} no imprime texto del usuario: condiciones, bucles, URLs o salida escapada. */
+    /**
+     * Etiquetas cuyo ${...} no imprime texto del usuario: condiciones, bucles, URLs o salida escapada.
+     * {@code c:param} solo añade un parámetro a una URL que {@code c:url} codifica (por ejemplo el
+     * código de cuenta de un enlace "Ver movimientos").
+     */
     private static final Pattern ETIQUETA_CON_EXPRESION = Pattern.compile(
-            "<(c:if|c:when|c:set|c:forEach|c:out|c:url|fmt:formatNumber|jsp:param)\\b[^>]*>");
+            "<(c:if|c:when|c:set|c:forEach|c:out|c:url|c:param|fmt:formatNumber|jsp:param)\\b[^>]*>");
 
     /** Expresión que sí escapa: {@code ${fn:escapeXml(...)}} dentro del texto. */
     private static final Pattern FN_ESCAPE = Pattern.compile("\\$\\{fn:escapeXml\\([^}]*\\)}");

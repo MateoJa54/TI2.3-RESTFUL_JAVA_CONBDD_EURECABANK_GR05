@@ -350,4 +350,21 @@ class SesionWebTest {
         assertNotNull(f.atributo("usuario"));
         assertEquals(f.csrf(), f.atributo("csrf"));
     }
+
+    @Test
+    void lasInicialesSonLasDosPrimerasLetrasDeLasDosPrimerasPalabras() {
+        assertEquals("CR", SesionWeb.iniciales("Carlos Romero Mena"));
+        assertEquals("A", SesionWeb.iniciales("  ana  "));
+        assertEquals("ÑL", SesionWeb.iniciales("ñandú lópez"));
+        assertEquals("", SesionWeb.iniciales(""));
+        assertEquals("", SesionWeb.iniciales("   "));
+        assertEquals("", SesionWeb.iniciales(null));
+    }
+
+    @Test
+    void prepararVistaDejaLasInicialesDelEmpleado() {
+        ServletFalso f = ServletFalso.crear().conUsuarioAutenticado(new ClienteFalso());
+        SesionWeb.prepararVista(f.peticion(), "cuentas");
+        assertEquals("CR", f.atributo("iniciales"));
+    }
 }

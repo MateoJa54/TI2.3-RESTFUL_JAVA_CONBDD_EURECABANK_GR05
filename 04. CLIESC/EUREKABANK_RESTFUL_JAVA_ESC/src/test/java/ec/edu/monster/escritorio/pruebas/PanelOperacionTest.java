@@ -92,8 +92,8 @@ class PanelOperacionTest {
     }
 
     @Test
-    void elBotonDiceEjecutar() {
-        assertEquals("Ejecutar", boton.getText());
+    void elBotonNombraLaOperacion() {
+        assertEquals("Depositar", boton.getText());
     }
 
     @Test
@@ -265,7 +265,7 @@ class PanelOperacionTest {
         for (int m : new int[] {DEPOSITO, RETIRO, TRANSFERENCIA}) {
             ejecutar(m, ClienteFalso.CUENTA, "00200003", "10");
             assertEquals("El servicio no está disponible en este momento", estado.getText());
-            assertEquals("Ejecutar", boton.getText());
+            assertEquals(new String[] {"Depositar", "Retirar", "Transferir"}[m], boton.getText());
             assertTrue(boton.isEnabled());
         }
         assertTrue(avisosDeSesion.isEmpty());
@@ -300,7 +300,7 @@ class PanelOperacionTest {
         liberar.countDown();
         Swing.esperar(() -> boton.isEnabled());
         assertEquals(1, servidor.llamadas.size());
-        assertEquals("Ejecutar", boton.getText());
+        assertEquals("Depositar", boton.getText());
     }
 
     @Test

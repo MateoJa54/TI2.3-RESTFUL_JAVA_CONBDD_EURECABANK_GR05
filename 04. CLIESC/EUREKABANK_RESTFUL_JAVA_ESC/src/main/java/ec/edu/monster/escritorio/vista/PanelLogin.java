@@ -28,6 +28,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 
 /**
  * Inicio de sesión dividido: a la izquierda la ilustración de Monster y a la
@@ -46,6 +47,8 @@ public class PanelLogin extends JPanel {
     private final JPasswordField campoClave = new JPasswordField(22);
     private final JButton botonIngresar = PanelTarjeta.boton("botonIngresar", TEXTO_BOTON);
     private final JLabel etiquetaEstado = PanelTarjeta.crearEstado("etiquetaEstado");
+    private final JToggleButton botonMostrarClave = new JToggleButton(Iconos.de(Iconos.Tipo.MOSTRAR, Tema.TEXTO_SUAVE));
+    private final char ecoPorDefecto;
     private Runnable alAutenticar;
     private boolean enCurso;
 
@@ -59,6 +62,12 @@ public class PanelLogin extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
         campoUsuario.setName("campoUsuario");
         campoClave.setName("campoClave");
+        ecoPorDefecto = campoClave.getEchoChar();
+        botonMostrarClave.setName("botonMostrarClave");
+        botonMostrarClave.setToolTipText("Mostrar clave");
+        botonMostrarClave.getAccessibleContext().setAccessibleName("Mostrar clave");
+        botonMostrarClave.setFocusPainted(false);
+        botonMostrarClave.addActionListener(e -> mostrarClave(botonMostrarClave.isSelected()));
         add(new Ilustracion(cargarIlustracion()));
         add(construirLado());
         campoUsuario.addActionListener(e -> campoClave.requestFocusInWindow());
@@ -73,23 +82,26 @@ public class PanelLogin extends JPanel {
         marca.setFont(Tema.fuenteNegrita(Tema.TAMANO_BASE));
         marca.setForeground(Tema.ACENTO);
         marca.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel titulo = new JLabel("Ingreso de empleados");
-        titulo.setFont(Tema.fuenteNegrita(22f));
-        titulo.setForeground(Tema.TEXTO);
-        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titulo.setBorder(BorderFactory.createEmptyBorder(6, 0, 20, 0));
+        JPanel encabezado = PanelTarjeta.encabezado("Ingreso de empleados",
+                "Ingrese con su usuario y su clave de empleado.");
+        encabezado.setBorder(BorderFactory.createEmptyBorder(6, 0, 20, 0));
         botonIngresar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        botonIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, botonIngresar.getPreferredSize().height + 6));
+        botonIngresar.setPreferredSize(new Dimension(botonIngresar.getPreferredSize().width, Tema.ALTO_CAMPO));
+        botonIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, Tema.ALTO_CAMPO));
         contenido.add(marca);
-        contenido.add(titulo);
+        contenido.add(encabezado);
         contenido.add(PanelTarjeta.campo(PanelTarjeta.etiqueta("Usuario"), campoUsuario));
         contenido.add(Box.createVerticalStrut(14));
-        contenido.add(PanelTarjeta.campo(PanelTarjeta.etiqueta("Clave"), campoClave));
+        JPanel filaClave = new JPanel(new BorderLayout(8, 0));
+        filaClave.setOpaque(false);
+        filaClave.add(campoClave, BorderLayout.CENTER);
+        filaClave.add(botonMostrarClave, BorderLayout.EAST);
+        contenido.add(PanelTarjeta.campo(PanelTarjeta.etiqueta("Clave"), filaClave));
         contenido.add(Box.createVerticalStrut(20));
         contenido.add(botonIngresar);
         contenido.add(etiquetaEstado);
         PanelTarjeta tarjeta = new PanelTarjeta(contenido);
-        tarjeta.setPreferredSize(new Dimension(380, 380));
+        tarjeta.setPreferredSize(new Dimension(420, 380));
         JPanel centro = new JPanel(new GridBagLayout());
         centro.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
@@ -98,6 +110,19 @@ public class PanelLogin extends JPanel {
         c.insets = new java.awt.Insets(0, 24, 0, 24);
         centro.add(tarjeta, c);
         return centro;
+    }
+
+    /**
+     * Muestra u oculta la clave escrita. Solo cambia cómo se dibuja: el
+     * contenido sigue igual y no se envía nada al servicio.
+     *
+     * @param mostrar {@code true} para ver la clave en texto claro
+     */
+    public void mostrarClave(boolean mostrar) {
+        campoClave.setEchoChar(mostrar ? (char) 0 : ecoPorDefecto);
+        botonMostrarClave.setSelected(mostrar);
+        botonMostrarClave.setToolTipText(mostrar ? "Ocultar clave" : "Mostrar clave");
+        botonMostrarClave.getAccessibleContext().setAccessibleName(mostrar ? "Ocultar clave" : "Mostrar clave");
     }
 
     private static BufferedImage cargarIlustracion() {
@@ -178,6 +203,9 @@ public class PanelLogin extends JPanel {
 
         private static final long serialVersionUID = 1L;
         private final transient BufferedImage imagen;
+        private transient BufferedImage escalada;
+        private int anchoEscalada = -1;
+        private int altoEscalada = -1;
 
         Ilustracion(BufferedImage imagen) {
             this.imagen = imagen;
@@ -191,23 +219,53 @@ public class PanelLogin extends JPanel {
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
                 int ancho = getWidth();
                 int alto = getHeight();
                 g2.setClip(new RoundRectangle2D.Float(0, 0, ancho, alto,
                         Tema.RADIO_TARJETA * 2, Tema.RADIO_TARJETA * 2));
                 g2.setColor(Tema.ACENTO);
                 g2.fillRect(0, 0, ancho, alto);
-                if (imagen != null) {
+                if (imagen != null && ancho > 0 && alto > 0) {
                     double escala = Math.max((double) ancho / imagen.getWidth(), (double) alto / imagen.getHeight());
                     int w = (int) Math.ceil(imagen.getWidth() * escala);
                     int h = (int) Math.ceil(imagen.getHeight() * escala);
-                    Image ajustada = imagen;
-                    g2.drawImage(ajustada, (ancho - w) / 2, (alto - h) / 2, w, h, null);
+                    g2.drawImage(escalada(w, h), (ancho - w) / 2, (alto - h) / 2, null);
                 }
             } finally {
                 g2.dispose();
             }
+        }
+
+        /** Reduce o amplía la ilustración por pasos (la mitad cada vez) y guarda el resultado mientras el tamaño no cambie. */
+        private BufferedImage escalada(int w, int h) {
+            if (escalada != null && anchoEscalada == w && altoEscalada == h) {
+                return escalada;
+            }
+            BufferedImage actual = imagen;
+            int aw = imagen.getWidth();
+            int ah = imagen.getHeight();
+            while (aw / 2 >= w && ah / 2 >= h) {
+                aw /= 2;
+                ah /= 2;
+                actual = pasar(actual, aw, ah, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            }
+            escalada = pasar(actual, w, h, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            anchoEscalada = w;
+            altoEscalada = h;
+            return escalada;
+        }
+
+        private static BufferedImage pasar(BufferedImage origen, int w, int h, Object interpolacion) {
+            BufferedImage destino = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = destino.createGraphics();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, interpolacion);
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.drawImage(origen, 0, 0, w, h, null);
+            } finally {
+                g.dispose();
+            }
+            return destino;
         }
     }
 }

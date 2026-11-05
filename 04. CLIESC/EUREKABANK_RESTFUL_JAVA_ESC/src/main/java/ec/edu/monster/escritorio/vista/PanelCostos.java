@@ -5,6 +5,7 @@ import ec.edu.monster.escritorio.modelo.RespuestaCostos;
 import ec.edu.monster.escritorio.util.Formato;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.GridLayout;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
@@ -14,8 +15,9 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * Proyección de costos de mantenimiento de una cuenta: formulario compacto
- * arriba y el detalle debajo, con los estados cargando, vacío, error y éxito.
+ * Proyección de costos de mantenimiento de una cuenta: formulario arriba y
+ * seis tarjetas de cifra debajo, con los estados cargando, vacío, error y
+ * éxito.
  */
 public class PanelCostos extends JPanel {
 
@@ -25,6 +27,7 @@ public class PanelCostos extends JPanel {
     private static final String CARTA_VACIO = "vacio";
     private static final String CARTA_CARGANDO = "cargando";
     private static final String CARTA_DATOS = "datos";
+    private static final int ESPACIO = 16;
 
     private final ControladorCostos controlador;
     private final Consumer<String> alSesionCaducada;
@@ -46,16 +49,19 @@ public class PanelCostos extends JPanel {
         this.controlador = Objects.requireNonNull(controlador, "El controlador es obligatorio");
         this.alSesionCaducada = alSesionCaducada;
         setBackground(Tema.FONDO);
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
         campoCuenta.setName("campoCuenta");
-        add(new PanelTarjeta(PanelTarjeta.formulario(
-                PanelTarjeta.campo(PanelTarjeta.etiqueta("Código de la cuenta"), campoCuenta),
-                botonConsultar, etiquetaEstado)), BorderLayout.NORTH);
+        add(PanelTarjeta.cabecera("Costos",
+                "Vea el costo de mantenimiento y las cifras proyectadas de una cuenta.",
+                new PanelTarjeta(PanelTarjeta.formulario(
+                        PanelTarjeta.campo(PanelTarjeta.etiqueta("Código de la cuenta"), campoCuenta),
+                        botonConsultar, etiquetaEstado))), BorderLayout.NORTH);
         datos.setOpaque(false);
-        resultado.add(vacio, CARTA_VACIO);
-        resultado.add(new PanelTarjeta.Esqueleto(4), CARTA_CARGANDO);
+        resultado.setOpaque(false);
+        resultado.add(new PanelTarjeta(vacio), CARTA_VACIO);
+        resultado.add(new PanelTarjeta(new PanelTarjeta.Esqueleto(4)), CARTA_CARGANDO);
         resultado.add(datos, CARTA_DATOS);
-        add(new PanelTarjeta(resultado), BorderLayout.CENTER);
+        add(resultado, BorderLayout.CENTER);
         campoCuenta.addActionListener(e -> consultar());
         botonConsultar.addActionListener(e -> consultar());
     }
@@ -116,23 +122,35 @@ public class PanelCostos extends JPanel {
     }
 
     /**
-     * Muestra la proyección de costos de la respuesta.
+     * Muestra la proyección de costos de la respuesta, en seis tarjetas de cifra.
      *
      * @param respuesta sobre con los costos de la cuenta
      */
     public void mostrarDetalle(RespuestaCostos respuesta) {
         datos.removeAll();
-        datos.add(PanelTarjeta.filasDetalle(new String[][] {
-                {"Saldo actual", PanelTarjeta.dinero(respuesta.getSaldoActual())},
-                {"Costo de mantenimiento", PanelTarjeta.dinero(respuesta.getCostoMantenimiento())},
-                {"Costo por movimiento", PanelTarjeta.dinero(respuesta.getCostoMovimiento())},
-                {"Interés proyectado", PanelTarjeta.dinero(respuesta.getInteresProyectado())},
-                {"Límite de mantenimiento", PanelTarjeta.dinero(respuesta.getLimiteMantenimiento())},
-                {"Operaciones sin costo", Formato.entero(respuesta.getOperacionesSinCosto())}}),
-                BorderLayout.NORTH);
+        JPanel rejilla = new JPanel(new GridLayout(2, 3, ESPACIO, ESPACIO));
+        rejilla.setOpaque(false);
+        rejilla.add(PanelTarjeta.cifra("Saldo actual", PanelTarjeta.dinero(respuesta.getSaldoActual())));
+        rejilla.add(PanelTarjeta.cifra("Costo de mantenimiento", PanelTarjeta.dinero(respuesta.getCostoMantenimiento())));
+        rejilla.add(PanelTarjeta.cifra("Costo por movimiento", PanelTarjeta.dinero(respuesta.getCostoMovimiento())));
+        rejilla.add(PanelTarjeta.cifra("Interés proyectado", PanelTarjeta.dinero(respuesta.getInteresProyectado())));
+        rejilla.add(PanelTarjeta.cifra("Límite de mantenimiento", PanelTarjeta.dinero(respuesta.getLimiteMantenimiento())));
+        rejilla.add(PanelTarjeta.cifra("Operaciones sin costo", Formato.entero(respuesta.getOperacionesSinCosto())));
+        datos.add(rejilla, BorderLayout.NORTH);
         datos.revalidate();
         datos.repaint();
         ((CardLayout) resultado.getLayout()).show(resultado, CARTA_DATOS);
+    }
+
+    /**
+     * Pone en el campo el código de una cuenta elegida desde otra pestaña,
+     * sin consultarla.
+     *
+     * @param codigo código de la cuenta
+     */
+    public void cargarCuenta(String codigo) {
+        campoCuenta.setText(codigo == null ? "" : codigo.trim());
+        mostrarEstado("", false);
     }
 
     /**

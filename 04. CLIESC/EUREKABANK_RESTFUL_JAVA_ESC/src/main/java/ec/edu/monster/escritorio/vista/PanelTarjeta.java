@@ -152,7 +152,9 @@ public class PanelTarjeta extends JPanel {
         etiqueta.setLabelFor(componente);
         etiqueta.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
         componente.setAlignmentX(Component.LEFT_ALIGNMENT);
-        componente.setMaximumSize(new Dimension(Integer.MAX_VALUE, componente.getPreferredSize().height));
+        Dimension preferido = componente.getPreferredSize();
+        componente.setPreferredSize(new Dimension(preferido.width, Tema.ALTO_CAMPO));
+        componente.setMaximumSize(new Dimension(Integer.MAX_VALUE, Tema.ALTO_CAMPO));
         columna.add(etiqueta);
         columna.add(componente);
         return columna;
@@ -172,7 +174,11 @@ public class PanelTarjeta extends JPanel {
     /** Muestra un mensaje en línea; un texto vacío lo limpia. */
     static void mostrar(JLabel estado, String mensaje, boolean error) {
         estado.setForeground(error ? Tema.ERROR : Tema.EXITO);
-        estado.setText(mensaje == null ? "" : mensaje);
+        boolean vacio = mensaje == null || mensaje.isEmpty();
+        estado.setText(vacio ? "" : mensaje);
+        estado.setIcon(vacio ? null : Iconos.de(error ? Iconos.Tipo.ERROR : Iconos.Tipo.EXITO, 16,
+                error ? Tema.ERROR : Tema.EXITO));
+        estado.setIconTextGap(8);
     }
 
     /** Botón de acción principal (el CTA de la pantalla). */
@@ -321,6 +327,184 @@ public class PanelTarjeta extends JPanel {
         c.fill = GridBagConstraints.HORIZONTAL;
         panel.add(Box.createHorizontalGlue(), c);
         return panel;
+    }
+
+    // ------------------------------------------------------------------
+    // Piezas de diseño v2: encabezado de página, chips, cifras e insignias
+
+    /**
+     * Encabezado de página: título de 24 px y una línea de ayuda de 13 px.
+     *
+     * @param titulo título de la página
+     * @param ayuda  línea de ayuda, una sola frase
+     * @return el encabezado
+     */
+    static JPanel encabezado(String titulo, String ayuda) {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel etiquetaTitulo = new JLabel(titulo);
+        etiquetaTitulo.setName("titulo");
+        etiquetaTitulo.setFont(Tema.fuenteNegrita(Tema.TAMANO_TITULO));
+        etiquetaTitulo.setForeground(Tema.TEXTO);
+        etiquetaTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel etiquetaAyuda = new JLabel(ayuda);
+        etiquetaAyuda.setName("ayuda");
+        etiquetaAyuda.setFont(Tema.fuente(Tema.TAMANO_AYUDA));
+        etiquetaAyuda.setForeground(Tema.TEXTO_SUAVE);
+        etiquetaAyuda.setAlignmentX(Component.LEFT_ALIGNMENT);
+        etiquetaAyuda.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        panel.add(etiquetaTitulo);
+        panel.add(etiquetaAyuda);
+        return panel;
+    }
+
+    /**
+     * Cabecera de una página: el encabezado arriba y el formulario debajo.
+     *
+     * @param titulo     título de la página
+     * @param ayuda      línea de ayuda
+     * @param formulario tarjeta del formulario
+     * @return el bloque superior de la página
+     */
+    static JPanel cabecera(String titulo, String ayuda, JComponent formulario) {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setOpaque(false);
+        panel.add(encabezado(titulo, ayuda), BorderLayout.NORTH);
+        panel.add(formulario, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
+     * Chip: etiqueta redondeada de 8 px con texto y fondo de color.
+     *
+     * @param texto      texto del chip
+     * @param colorTexto color del texto
+     * @param fondo      color del fondo
+     * @return el chip
+     */
+    static JLabel chip(String texto, Color colorTexto, Color fondo) {
+        Chip chip = new Chip(texto == null ? "" : texto, fondo);
+        chip.setFont(Tema.fuenteNegrita(12f));
+        chip.setForeground(colorTexto);
+        chip.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        return chip;
+    }
+
+    /**
+     * Cifra destacada: etiqueta pequeña arriba y cifra grande abajo, en una tarjeta.
+     *
+     * @param etiqueta etiqueta de la cifra
+     * @param valor    valor ya formateado
+     * @return la tarjeta; su valor se llama {@code valor.<etiqueta>}
+     */
+    static PanelTarjeta cifra(String etiqueta, String valor) {
+        JPanel contenido = new JPanel();
+        contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        JLabel nombre = new JLabel(etiqueta);
+        nombre.setForeground(Tema.TEXTO_SUAVE);
+        nombre.setFont(Tema.fuente(Tema.TAMANO_AYUDA));
+        nombre.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel cifra = new JLabel(valor);
+        cifra.setName("valor." + etiqueta);
+        cifra.setFont(Tema.fuenteNegrita(Tema.TAMANO_CIFRA));
+        cifra.setForeground(Tema.TEXTO);
+        cifra.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cifra.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+        contenido.add(nombre);
+        contenido.add(cifra);
+        contenido.add(Box.createVerticalGlue());
+        return new PanelTarjeta(contenido);
+    }
+
+    /** Etiqueta con fondo redondeado de 8 px. */
+    static final class Chip extends JLabel {
+
+        private static final long serialVersionUID = 1L;
+        private final transient Color fondo;
+
+        Chip(String texto, Color fondo) {
+            super(texto);
+            this.fondo = fondo;
+            setOpaque(false);
+            setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(fondo);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), Tema.RADIO * 2, Tema.RADIO * 2);
+            } finally {
+                g2.dispose();
+            }
+            super.paintComponent(g);
+        }
+    }
+
+    /**
+     * Celda de tabla que muestra el tipo de un movimiento como chip: Ingreso
+     * en verde y Salida en rojo, siempre con la palabra.
+     */
+    static final class Insignia extends DefaultTableCellRenderer {
+
+        private static final long serialVersionUID = 1L;
+
+        Insignia() {
+            setHorizontalAlignment(SwingConstants.LEFT);
+            setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable tabla, Object valor, boolean seleccionada,
+                boolean foco, int fila, int columna) {
+            super.getTableCellRendererComponent(tabla, valor, seleccionada, foco, fila, columna);
+            String texto = valor == null ? "" : valor.toString();
+            boolean ingreso = "INGRESO".equalsIgnoreCase(texto);
+            boolean salida = "SALIDA".equalsIgnoreCase(texto);
+            setText(ingreso ? "Ingreso" : salida ? "Salida" : texto);
+            setFont(Tema.fuenteNegrita(12f));
+            setForeground(ingreso ? Tema.EXITO : salida ? Tema.ERROR : Tema.NEUTRO);
+            setBackground(seleccionada ? tabla.getSelectionBackground() : Tema.SUPERFICIE);
+            setOpaque(true);
+            return this;
+        }
+    }
+
+    /** Renderer de importes: signo más en los ingresos y menos en las salidas, con color y la misma cifra. */
+    static final class ImporteConSigno extends DefaultTableCellRenderer {
+
+        private static final long serialVersionUID = 1L;
+        private final int columnaTipo;
+
+        /**
+         * @param columnaTipo columna del tipo (INGRESO o SALIDA) de la misma fila
+         */
+        ImporteConSigno(int columnaTipo) {
+            this.columnaTipo = columnaTipo;
+            setHorizontalAlignment(SwingConstants.RIGHT);
+            setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable tabla, Object valor, boolean seleccionada,
+                boolean foco, int fila, int columna) {
+            super.getTableCellRendererComponent(tabla, valor, seleccionada, foco, fila, columna);
+            String cifra = valor == null ? "" : valor.toString();
+            String tipo = String.valueOf(tabla.getValueAt(fila, columnaTipo));
+            boolean ingreso = "INGRESO".equalsIgnoreCase(tipo);
+            boolean salida = "SALIDA".equalsIgnoreCase(tipo);
+            String signo = ingreso && !cifra.isEmpty() ? "+" : salida && !cifra.isEmpty() ? "-" : "";
+            setText(signo + cifra);
+            setFont(Tema.fuenteNegrita(Tema.TAMANO_BASE));
+            setForeground(ingreso ? Tema.EXITO : salida ? Tema.ERROR : Tema.TEXTO);
+            setBackground(seleccionada ? tabla.getSelectionBackground() : Tema.SUPERFICIE);
+            setOpaque(true);
+            return this;
+        }
     }
 
     // ------------------------------------------------------------------

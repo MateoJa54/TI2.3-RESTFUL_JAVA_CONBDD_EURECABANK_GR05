@@ -3,6 +3,7 @@ package ec.edu.monster.escritorio.vista;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.util.Arrays;
@@ -43,7 +44,33 @@ public final class Tema {
     /** Tamaño base de la letra, en puntos. */
     public static final float TAMANO_BASE = 13f;
     /** Alto de las filas de las tablas, en píxeles. */
-    public static final int ALTO_FILA = 32;
+    public static final int ALTO_FILA = 40;
+    /** Tinte del acento: fondo suave del destino activo y de la selección. */
+    public static final Color TINTE = new Color(0xE3F3F5);
+    /** Fondo de los avisos de éxito y de las etiquetas de estado correctas. */
+    public static final Color EXITO_FONDO = new Color(0xE6F4EC);
+    /** Fondo de los avisos de error y de las etiquetas de estado incorrectas. */
+    public static final Color ERROR_FONDO = new Color(0xFDECEA);
+    /** Texto neutro (chips de moneda). */
+    public static final Color NEUTRO = new Color(0x55636F);
+    /** Fondo neutro (chips de moneda). */
+    public static final Color NEUTRO_FONDO = new Color(0xEEF3F6);
+    /** Tamaño del título de página, en puntos. */
+    public static final float TAMANO_TITULO = 24f;
+    /** Tamaño de la ayuda bajo el título de página, en puntos. */
+    public static final float TAMANO_AYUDA = 13f;
+    /** Tamaño de los títulos de tarjeta, en puntos. */
+    public static final float TAMANO_TARJETA = 18f;
+    /** Tamaño de las cifras principales, en puntos. */
+    public static final float TAMANO_CIFRA = 32f;
+    /** Alto de los campos de texto, en píxeles. */
+    public static final int ALTO_CAMPO = 44;
+    /** Ancho de la barra lateral, en píxeles. */
+    public static final int ANCHO_BARRA = 220;
+    /** Tamaño inicial de las ventanas, en píxeles. */
+    public static final Dimension VENTANA_INICIAL = new Dimension(1100, 720);
+    /** Tamaño mínimo de las ventanas, en píxeles. */
+    public static final Dimension VENTANA_MINIMA = new Dimension(960, 640);
 
     private static final String FAMILIA_PREFERIDA = "Segoe UI";
     private static final String FAMILIA_RESPALDO = Font.SANS_SERIF;
