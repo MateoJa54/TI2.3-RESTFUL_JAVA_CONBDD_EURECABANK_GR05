@@ -1,47 +1,35 @@
-# CLIMOV - Cliente móvil Android para EURECABANK
+# CLIMOV — EurekaBank_RestfulJava
 
-Tu parte del proyecto. No borres ni modifiques nada fuera de esta carpeta, salvo que el responsable lo pida.
+Aplicación Android nativa en **Java**, organizada en MVC y con paquetes bajo `ec.edu.monster`. Consume el contrato REST JSON de EUREKABANK y ofrece las nueve operaciones que incluye el cliente de consola.
 
-## Qué tienes que construir
+## Abrir y compilar
 
-Una aplicación Android que consuma el servicio REST de EURECABANK. Debe ofrecer las nueve operaciones del
-contrato: autenticarse, cerrar sesión, listar las cuentas de un cliente, consultar una cuenta, ver sus
-movimientos, depositar, retirar, transferir y consultar los costos de mantenimiento.
+Abre `04. CLIMOV/CLIMOV` en Android Studio. El nombre visible es `EurekaBank_RestfulJava`; la clase de inicio es `ec.edu.monster.MainActivity`.
 
-## Qué consumir
+```powershell
+cd "04. CLIMOV\CLIMOV"
+./gradlew.bat testDebugUnitTest
+./gradlew.bat assembleDebug
+```
 
-Las nueve rutas están bajo la base `http://localhost:8080/EUREKABANK_RESTFUL_JAVA/api`, con JSON en UTF-8.
-Todas menos el login exigen la cabecera `Authorization: Bearer <token>`. El token lo devuelve el login en el
-campo `token`, y tu app debe enviarlo en cada petición protegida.
+El paquete de la aplicación es `ec.edu.monster.eurekabank.restfuljava` y el mínimo es Android 7 (API 24).
 
-Desde el emulador de Android, `localhost` es el propio emulador. La máquina anfitriona se alcanza con
-`10.0.2.2`, así que la base es `http://10.0.2.2:8080/EUREKABANK_RESTFUL_JAVA/api`. En un teléfono físico usa
-la IP de tu PC en la red local. Android bloquea el tráfico HTTP en claro por defecto: revisa la configuración
-de red de la app para permitirlo solo hacia ese host.
+## Conexión con Payara
 
-Las fuentes de verdad son el contrato congelado `01. UML\00. CONTRATO\CONTRATO_CONGELADO_REST.md` y el
-contrato OpenAPI `04. SERVIDOR\contrato\eurekabank-openapi.yaml`. Si algo no coincide, manda el contrato.
+La pantalla de acceso permite editar la URL base completa; se guarda para el siguiente inicio. El valor inicial funciona en el emulador Android:
 
-## Reglas que no se negocian
+`http://10.0.2.2:8080/EUREKABANK_RESTFUL_JAVA/api`
 
-- Los importes se manejan con `BigDecimal` a 2 decimales y redondeo `HALF_UP`, nunca con `double`.
-- La clave viaja como SHA-256 en hexadecimal.
-- La app muestra el `codigo` y el `mensaje` que devuelve el servidor, sin reescribirlos.
-- CORS no aplica en Android, porque no es un navegador.
+En un teléfono conectado a la misma red Wi-Fi, reemplaza `10.0.2.2` por la IPv4 LAN del equipo donde se ejecuta Payara, por ejemplo `http://192.168.1.25:8080/EUREKABANK_RESTFUL_JAVA/api`. No uses `localhost` desde el teléfono. Payara debe escuchar en la interfaz de red y el firewall debe permitir el puerto configurado (8080 por defecto).
 
-## Referencia
+Todas las operaciones menos login envían `Authorization: Bearer <token>`. La contraseña se convierte a SHA-256 hexadecimal antes de enviarse. Los importes usan `BigDecimal`, escala 2 y redondeo `HALF_UP`. Los resultados muestran el código y mensaje que devuelve el servidor, y presentan los datos de cuentas, movimientos, transferencias y costos con etiquetas legibles.
 
-La consola `04. CLICON\EUREKABANK_RESTFUL_JAVA_CON\` ya está terminada y probada. Úsala como modelo para los
-modelos, los nombres de las operaciones y el tratamiento de errores.
+## Operaciones
 
-## Cómo se prueba
+- Iniciar y cerrar sesión.
+- Listar cuentas por cédula y consultar una cuenta.
+- Consultar movimientos.
+- Realizar depósitos, retiros y transferencias.
+- Consultar costos de mantenimiento.
 
-Pruebas unitarias con JUnit para la capa de datos y el armado de peticiones, sin red. Para la prueba manual,
-arranca el servidor en Payara y ejecuta el flujo completo desde el emulador contra `10.0.2.2`.
-
-## Entregables de tu parte
-
-- Carpeta `04. CLIMOV\` con el proyecto Gradle, el código y las pruebas.
-- El diagrama de clases de tu cliente, en `01. UML\03. DIAGRAMAS\04_CLASES\`, registrado en el proyecto
-  `04_CLASES.prj` y en el workspace `RESTFUL_JAVA_CONBDD_GR03.sws`.
-- Avisa al responsable para que actualice el diagrama de arquitectura con tu componente.
+La aplicación usa HTTP para permitir la conexión local de laboratorio a Payara. Para un teléfono físico, cambia la IP desde el campo **Servidor** de la pantalla de acceso.
